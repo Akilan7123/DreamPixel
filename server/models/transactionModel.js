@@ -19,12 +19,18 @@ const transactionSchema = new mongoose.Schema({
     },
     payment: {
         type: Boolean,
-        default:false,
+        default: false,
     },
-    date:{
-        type:Number
-    },
+    date: {
+        type: Date,
+        default: Date.now, // Stores as proper Date object
+        get: (date) => date.toISOString() // Optional: Format when retrieved
+    }
+}, {
+    timestamps: true, // Adds createdAt/updatedAt
+    toJSON: { getters: true } // Applies getters when converting to JSON
 })
+
 
 const transactionModel = mongoose.models.transaction || mongoose.model("transaction", transactionSchema);
 

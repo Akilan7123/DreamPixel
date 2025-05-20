@@ -18,6 +18,7 @@ import cross_icon from './cross_icon.svg'
 import star_group from './star_group.png'
 import credit_star from './credit_star.svg'
 import profile_icon from './profile_icon.png'
+import gamer_logo from './gamer_logo.jpg'
 
 export const assets = {
     logo,
@@ -34,7 +35,8 @@ export const assets = {
     cross_icon,
     star_group,
     credit_star,
-    profile_icon
+    profile_icon,
+    gamer_logo,
 }
 
 export const stepsData = [
@@ -59,23 +61,23 @@ export const testimonialsData = [
     {
         image:profile_img_1,
         name:'Donald Jackman',
-        role:'Graphic Designer',
+        role:'Solo Dev',
         stars:5,
-        text:`I've been using bg.removal for nearly two years, primarily for Instagram, and it has been incredibly user-friendly, making my work much easier.`
+        text:`Described 'a neon-lit hacker hideout' and got instant environment concepts. My game’s Kickstarter visuals were done in hours instead of weeks!`
     },
     {
         image:profile_img_2,
         name:'Richard Nelson',
-        role:'Content Creator',
+        role:'Novelist',
         stars:4,
-        text:`I've been using bg.removal for nearly two years, primarily for Instagram, and it has been incredibly user-friendly, making my work much easier.`
+        text:`When words weren’t enough, I described ‘a library floating in a storm’ and got the perfect book cover. My readers adore these visual surprises!`
     },
     {
-        image:profile_img_1,
-        name:'Donald Jackman',
-        role:' Graphic Designer',
+        image:gamer_logo,
+        name:'Ryan L',
+        role:'Content Creator',
         stars:5,
-        text:`I've been using bg.removal for nearly two years, primarily for Instagram, and it has been incredibly user-friendly, making my work much easier.`
+        text:`No more stock photo struggles! I type prompts like 'vintage cafe with cats' and get perfect posts. Our followers think we hired a designer!`
     },
 ]
 
