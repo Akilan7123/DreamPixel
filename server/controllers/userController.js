@@ -3,7 +3,8 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import razorpay from 'razorpay';
 import transactionModel from "../models/transactionModel.js";
-import orders from "razorpay/dist/types/orders.ts";
+const crypto = require('crypto');
+// import orders from "razorpay/dist/types/orders.js";
 
 const registerUser = async (req, res) => {
     try {
@@ -236,74 +237,81 @@ const paymentRazorpay = async (req, res) => {
     }
 };
 
+// 
+
 const verifyRazorpay = async (req, res) => {
     try {
-        const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
+        // const crypto = require('crypto'); // Make sure this is at the top or here
         
-        if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
-            return res.status(400).json({ success: false, message: 'Payment verification failed - missing fields' });
-        }
+        const { razorpay_payment_id, razorpay_order_id, razorpay_signature, receipt } = req.body;
 
-        // Verify the payment signature
-        const generatedSignature = crypto
+        // 1. Create the expected signature
+        const expectedSignature = crypto
             .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-            .update(razorpay_order_id + "|" + razorpay_payment_id)
+            .update(`${razorpay_order_id}|${razorpay_payment_id}`)
             .digest('hex');
 
-        if (generatedSignature !== razorpay_signature) {
-            return res.status(400).json({ success: false, message: 'Payment verification failed - invalid signature' });
+        // 2. Verify the signature
+        if (expectedSignature !== razorpay_signature) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Payment verification failed - invalid signature' 
+            });
         }
 
-        // Fetch the order details
-        const orderInfo = await razorpayInstance.orders.fetch(razorpay_order_id);
-
-        if (orderInfo.status !== 'paid') {
-            return res.status(400).json({ success: false, message: 'Payment not completed' });
+        // 3. Check payment status with Razorpay
+        const payment = await razorpayInstance.payments.fetch(razorpay_payment_id);
+        if (payment.status !== 'captured') {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Payment not captured' 
+            });
         }
 
-        // Check if transaction already processed
-        const transactionData = await transactionModel.findById(orderInfo.receipt);
-        if (!transactionData) {
-            return res.status(404).json({ success: false, message: 'Transaction not found' });
-        }
-        if (transactionData.payment) {
-            return res.json({ success: true, message: 'Credits already added' });
+        // 4. Find and update transaction
+        const transaction = await transactionModel.findById(receipt);
+        if (!transaction) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Transaction not found' 
+            });
         }
 
-        // Update user credits
-        const userData = await userModel.findById(transactionData.userId);
-        const creditBalance = userData.creditBalance + transactionData.credits;
-
-        // Use transaction to ensure both updates succeed or fail together
-        const session = await mongoose.startSession();
-        session.startTransaction();
-        
-        try {
-            await userModel.findByIdAndUpdate(
-                userData._id,
-                { creditBalance },
-                { session }
-            );
-            
-            await transactionModel.findByIdAndUpdate(
-                transactionData._id,
-                { payment: true, razorpayPaymentId: razorpay_payment_id },
-                { session }
-            );
-            
-            await session.commitTransaction();
-            res.json({ success: true, message: "Credits Added Successfully" });
-            
-        } catch (updateError) {
-            await session.abortTransaction();
-            throw updateError;
-        } finally {
-            session.endSession();
+        if (transaction.payment) {
+            return res.json({ 
+                success: true, 
+                message: 'Credits already added' 
+            });
         }
+
+        // 5. Update user credits
+        await userModel.findByIdAndUpdate(
+            transaction.userId,
+            { $inc: { creditBalance: transaction.credits } }
+        );
+
+        // 6. Mark transaction as complete
+        await transactionModel.findByIdAndUpdate(
+            receipt,
+            { 
+                payment: true,
+                razorpayPaymentId: razorpay_payment_id,
+                status: 'completed',
+                verifiedAt: new Date()
+            }
+        );
+
+        res.json({ 
+            success: true, 
+            message: 'Credits added successfully' 
+        });
 
     } catch (error) {
         console.error('Verification error:', error);
-        res.status(500).json({ success: false, message: error.message || 'Payment verification failed' });
+        res.status(500).json({ 
+            success: false, 
+            message: error.message || 'Payment verification failed' 
+        });
     }
 };
 
